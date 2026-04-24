@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Sidebar from "./components/Sidebar";
-import SearchBar from "./components/SearchBar";
-import BookGrid from "./components/BookGrid";
+import BookSearch from "./components/BookSearch";
 import SavedBooks from "./components/SavedBooks";
 
 export default function HomePage() {
@@ -28,8 +27,7 @@ export default function HomePage() {
         <div className="flex-1 bg-[#f7f5ed] p-8">
           <h2 className="text-3xl font-bold">Discover</h2>
 
-          <SearchBar />
-          <BookGrid authMode={authMode} />
+          <BookSearch canSave={authMode === "user"} />
           <SavedBooks authMode={authMode} />
         </div>
       </div>

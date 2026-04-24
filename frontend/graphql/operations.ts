@@ -16,9 +16,9 @@ export const SEARCH_OPEN_LIBRARY = gql`
     searchOpenLibrary(query: $query) {
       key
       title
-      author_name
-      first_publish_year
-      cover_id
+      authorName
+      firstPublishYear
+      coverId
     }
   }
 `;

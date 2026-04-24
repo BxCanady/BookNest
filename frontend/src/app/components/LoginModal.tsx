@@ -41,12 +41,15 @@ export default function LoginModal({ onClose, onLogin }: LoginModalProps) {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button className="w-full bg-black text-white py-2 rounded">
+          <button
+            type="submit"
+            className="w-full bg-black text-white py-2 rounded"
+          >
             Login
           </button>
         </form>
 
-        <button onClick={onClose} className="mt-3 text-sm">
+        <button type="button" onClick={onClose} className="mt-3 text-sm">
           Close
         </button>
       </div>

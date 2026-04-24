@@ -13,10 +13,12 @@ interface ItemProps {
   icon: ReactNode;
   label: string;
   active?: boolean;
+  onClick?: () => void;
 }
 
 export default function Sidebar({ authMode, setAuthMode }: SidebarProps) {
   const [showLogin, setShowLogin] = useState(false);
+  const [activeItem, setActiveItem] = useState("discover");
 
   const handleLogin = () => {
     document.cookie = "authMode=user; path=/";
@@ -43,11 +45,36 @@ export default function Sidebar({ authMode, setAuthMode }: SidebarProps) {
           <h1 className="text-sm font-black tracking-widest">BOOKNEST</h1>
 
           <div className="mt-8 space-y-4 text-sm">
-            <Item icon={<Home size={16} />} label="Discover" active />
-            <Item icon={<Grid2X2 size={16} />} label="Category" />
-            <Item icon={<Library size={16} />} label="Library" />
-            <Item icon={<Download size={16} />} label="Download" />
-            <Item icon={<Heart size={16} />} label="Favorite" />
+            <Item
+              icon={<Home size={16} />}
+              label="Discover"
+              active={activeItem === "discover"}
+              onClick={() => setActiveItem("discover")}
+            />
+            <Item
+              icon={<Grid2X2 size={16} />}
+              label="Category"
+              active={activeItem === "category"}
+              onClick={() => setActiveItem("category")}
+            />
+            <Item
+              icon={<Library size={16} />}
+              label="Library"
+              active={activeItem === "library"}
+              onClick={() => setActiveItem("library")}
+            />
+            <Item
+              icon={<Download size={16} />}
+              label="Download"
+              active={activeItem === "download"}
+              onClick={() => setActiveItem("download")}
+            />
+            <Item
+              icon={<Heart size={16} />}
+              label="Favorite"
+              active={activeItem === "favorite"}
+              onClick={() => setActiveItem("favorite")}
+            />
           </div>
         </div>
 
@@ -65,6 +92,7 @@ export default function Sidebar({ authMode, setAuthMode }: SidebarProps) {
           {authMode === null && (
             <>
               <button
+                type="button"
                 onClick={handleGuest}
                 className="w-full rounded-lg border py-2 text-sm"
               >
@@ -72,6 +100,7 @@ export default function Sidebar({ authMode, setAuthMode }: SidebarProps) {
               </button>
 
               <button
+                type="button"
                 onClick={() => setShowLogin(true)}
                 className="w-full rounded-lg bg-black py-2 text-sm text-white"
               >
@@ -84,6 +113,7 @@ export default function Sidebar({ authMode, setAuthMode }: SidebarProps) {
           {authMode === "guest" && (
             <>
               <button
+                type="button"
                 onClick={() => setShowLogin(true)}
                 className="w-full rounded-lg bg-black py-2 text-sm text-white"
               >
@@ -91,6 +121,7 @@ export default function Sidebar({ authMode, setAuthMode }: SidebarProps) {
               </button>
 
               <button
+                type="button"
                 onClick={handleLogout}
                 className="w-full rounded-lg border py-2 text-sm"
               >
@@ -102,6 +133,7 @@ export default function Sidebar({ authMode, setAuthMode }: SidebarProps) {
           {/* User */}
           {authMode === "user" && (
             <button
+              type="button"
               onClick={handleLogout}
               className="flex w-full items-center justify-center gap-2 rounded-lg border py-2 text-sm"
             >
@@ -119,15 +151,19 @@ export default function Sidebar({ authMode, setAuthMode }: SidebarProps) {
   );
 }
 
-function Item({ icon, label, active = false }: ItemProps) {
+function Item({ icon, label, active = false, onClick }: ItemProps) {
   return (
-    <div
-      className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
-        active ? "bg-orange-100 text-orange-600" : "text-gray-500"
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all duration-150 ${
+        active
+          ? "bg-orange-100 text-orange-600"
+          : "text-gray-500 hover:bg-slate-100"
       }`}
     >
       {icon}
       <span>{label}</span>
-    </div>
+    </button>
   );
 }

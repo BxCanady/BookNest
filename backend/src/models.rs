@@ -16,12 +16,14 @@ pub struct Book {
 // This is the shape of a book result that comes from Open Library.
 // It is different from the local Book because it uses Open Library's fields.
 #[derive(SimpleObject, Clone)]
-#[graphql(rename_fields = "snake_case")]
 pub struct OpenLibraryBook {
     pub key: String,
     pub title: String,
+    #[graphql(name = "authorName")]
     pub author_name: Vec<String>,
+    #[graphql(name = "firstPublishYear")]
     pub first_publish_year: Option<i32>,
+    #[graphql(name = "coverId")]
     pub cover_id: Option<i32>,
 }
 
