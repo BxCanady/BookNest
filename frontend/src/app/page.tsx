@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import BookSearch from "./components/BookSearch";
 import SavedBooks from "./components/SavedBooks";
+import BookGrid from "./components/BookGrid";
+
+type NavItem = "discover" | "category" | "library" | "download" | "favorite";
 
 export default function HomePage() {
   const [authMode, setAuthMode] = useState<"guest" | "user" | null>(null);
+  const [activeItem, setActiveItem] = useState<NavItem>("discover");
 
   useEffect(() => {
     const mode = document.cookie.includes("authMode=user")
@@ -22,10 +26,16 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-[#ebe8dc] p-6">
       <div className="mx-auto flex max-w-7xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-        <Sidebar authMode={authMode} setAuthMode={setAuthMode} />
+        <Sidebar
+          authMode={authMode}
+          setAuthMode={setAuthMode}
+          onSelectItem={setActiveItem}
+        />
 
-        <div className="flex-1 bg-[#f7f5ed] p-8">
-          <h2 className="text-3xl font-bold">Discover</h2>
+        <div className="min-w-0 flex-1 overflow-x-auto bg-[#f7f5ed] p-8">
+          <h2 className="text-3xl font-bold capitalize">{activeItem}</h2>
+
+          {activeItem === "discover" && <BookGrid authMode={authMode} />}
 
           <BookSearch canSave={authMode === "user"} />
           <SavedBooks authMode={authMode} />

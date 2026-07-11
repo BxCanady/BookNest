@@ -12,6 +12,7 @@ use axum::{
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::cors::CorsLayer;
 
+mod errors;
 mod models;
 mod openlibrary;
 mod schema;
@@ -31,6 +32,12 @@ async fn playground() -> impl IntoResponse {
 
 #[tokio::main]
 async fn main() {
+    // Load backend/.env so local API keys are available in any run context.
+    let backend_env_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(".env");
+    if dotenvy::from_path(&backend_env_path).is_err() {
+        let _ = dotenvy::dotenv();
+    }
+
     // Create shared app state for local saved books.
     let state: SharedState = Arc::new(AppState::default());
 

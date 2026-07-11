@@ -23,6 +23,21 @@ export const SEARCH_OPEN_LIBRARY = gql`
   }
 `;
 
+export const NYT_OVERVIEW = gql`
+  query NytOverview {
+    nytOverview {
+      listName
+      listNameEncoded
+      books {
+        primaryIsbn13
+        title
+        author
+        bookImage
+      }
+    }
+  }
+`;
+
 export const ADD_BOOK = gql`
   mutation AddBook($title: String!, $author: String!) {
     addBook(title: $title, author: $author) {

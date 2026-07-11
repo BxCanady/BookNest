@@ -7,7 +7,10 @@ import LoginModal from "./LoginModal";
 interface SidebarProps {
   authMode: "guest" | "user" | null;
   setAuthMode: Dispatch<SetStateAction<"guest" | "user" | null>>;
+  onSelectItem?: (item: NavItem) => void;
 }
+
+type NavItem = "discover" | "category" | "library" | "download" | "favorite";
 
 interface ItemProps {
   icon: ReactNode;
@@ -16,9 +19,18 @@ interface ItemProps {
   onClick?: () => void;
 }
 
-export default function Sidebar({ authMode, setAuthMode }: SidebarProps) {
+export default function Sidebar({
+  authMode,
+  setAuthMode,
+  onSelectItem,
+}: SidebarProps) {
   const [showLogin, setShowLogin] = useState(false);
-  const [activeItem, setActiveItem] = useState("discover");
+  const [activeItem, setActiveItem] = useState<NavItem>("discover");
+
+  const handleNavClick = (item: NavItem) => {
+    setActiveItem(item);
+    onSelectItem?.(item);
+  };
 
   const handleLogin = () => {
     document.cookie = "authMode=user; path=/";
@@ -49,31 +61,31 @@ export default function Sidebar({ authMode, setAuthMode }: SidebarProps) {
               icon={<Home size={16} />}
               label="Discover"
               active={activeItem === "discover"}
-              onClick={() => setActiveItem("discover")}
+              onClick={() => handleNavClick("discover")}
             />
             <Item
               icon={<Grid2X2 size={16} />}
-              label="Category"
+              label="Search"
               active={activeItem === "category"}
-              onClick={() => setActiveItem("category")}
+              onClick={() => handleNavClick("category")}
             />
             <Item
               icon={<Library size={16} />}
               label="Library"
               active={activeItem === "library"}
-              onClick={() => setActiveItem("library")}
+              onClick={() => handleNavClick("library")}
             />
             <Item
               icon={<Download size={16} />}
               label="Download"
               active={activeItem === "download"}
-              onClick={() => setActiveItem("download")}
+              onClick={() => handleNavClick("download")}
             />
             <Item
               icon={<Heart size={16} />}
               label="Favorite"
               active={activeItem === "favorite"}
-              onClick={() => setActiveItem("favorite")}
+              onClick={() => handleNavClick("favorite")}
             />
           </div>
         </div>

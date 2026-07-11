@@ -58,7 +58,7 @@ export default function BookSearch({ canSave }: BookSearchProps) {
   return (
     <section className="rounded-xl border bg-white p-6 shadow-sm">
       <h2 className="mb-4 text-2xl font-semibold text-slate-900">
-        Search Open Library
+        Search For A Book
       </h2>
 
       <div className="mb-4 flex gap-2">
@@ -89,6 +89,9 @@ export default function BookSearch({ canSave }: BookSearchProps) {
         {data?.searchOpenLibrary?.map((book: SearchResult) => {
           const coverUrl = book.coverId
             ? `https://covers.openlibrary.org/b/id/${book.coverId}-M.jpg`
+            : null;
+          const bookUrl = book.key
+            ? `https://openlibrary.org${book.key}`
             : null;
 
           return (
@@ -122,13 +125,24 @@ export default function BookSearch({ canSave }: BookSearchProps) {
                 </p>
               </div>
 
-              <button
-                onClick={() => handleImport(book)}
-                disabled={importing}
-                className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:opacity-60"
-              >
-                Save
-              </button>
+              {bookUrl ? (
+                <a
+                  href={bookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                >
+                  View Book
+                </a>
+              ) : (
+                <button
+                  onClick={() => handleImport(book)}
+                  disabled={importing}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:opacity-60"
+                >
+                  Save
+                </button>
+              )}
             </div>
           );
         })}

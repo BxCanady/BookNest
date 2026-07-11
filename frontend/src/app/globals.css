@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "daisyui";
 
 :root {
   --background: #ffffff;
@@ -23,4 +24,27 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.category-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #e2e8f0;
+}
+
+.category-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.category-scroll::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 9999px;
+}
+
+.category-scroll::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 9999px;
+}
+
+.category-scroll::-webkit-scrollbar-thumb:hover {
+  background: #334155;
 }
