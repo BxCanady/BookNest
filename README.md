@@ -1,17 +1,22 @@
 # BookNest
-Book Reading App with: Backend: Rust + Axum + async-graphql Frontend: Next.js + React + Apollo Client + GraphQL Codegen
-Fetching backend Cargo configuration to include accurate dependency and startup details in the documentation.
 
-Read [](file:///c%3A/Users/Brandon/Documents/GitHub/BookNest/backend/Cargo.toml)
+Book discovery and personal reading-tracker app.
+
+- **Backend**: Rust + Axum + `async-graphql`, persisted to Neon Postgres
+- **Frontend**: Next.js + React + Apollo Client + GraphQL Codegen
+
+---
 
 ## Backend overview
 
-The backend is a Rust GraphQL service in backend built with:
+The backend is a Rust GraphQL service in `backend/` built with:
 
 - `axum` for HTTP routing
 - `async-graphql` for GraphQL schema/resolvers
 - `tokio` for async runtime
-- `reqwest` for external Open Library requests
+- `reqwest` for external Open Library and NYT Best Sellers requests
+- `tokio-postgres` + `deadpool-postgres` for pooled Neon Postgres access
+- `bcrypt` for password hashing
 
 ---
 
@@ -23,23 +28,29 @@ The backend is a Rust GraphQL service in backend built with:
 - Exposes:
   - `GET /` → GraphQL Playground
   - `POST /graphql` → GraphQL endpoint
-- Creates shared app state and injects it into the GraphQL schema
-- Uses `tower_http::CorsLayer::permissive()` so the frontend can call the API from another origin
+- Loads `DATABASE_URL`/`NYT_API_KEY` from `.env` files via `dotenvy`
+- Connects to Neon Postgres on startup and injects the shared state into the GraphQL schema (falls back to no persistence if `DATABASE_URL` is unset)
+- Reads the authenticated user from the `x-user-id` header on each request
+- Uses a permissive CORS layer so the frontend can call the API from another origin
 
 ### schema.rs
 
 Defines the GraphQL API:
 
 - `QueryRoot`
-  - `books`: returns the in-memory saved book list
+  - `books`: returns the current user's saved books
   - `book(id: UUID)`: returns one saved book
   - `search_open_library(query: String)`: proxies Open Library search
+  - `nyt_overview`: top books across all NYT Best Sellers categories
+  - `nyt_list_names`: available NYT list/category names
+  - `nyt_lists_by_categories(categories: [String!]!)`: full NYT lists for selected categories
 
 - `MutationRoot`
-  - `add_book(title, author)`: add a saved book locally
-  - `update_book_status(id, status)`: update a saved book status
-  - `import_open_library_book(title, author)`: save an Open Library result locally
-  - `login(email, password)`: temp mock login returning a token
+  - `add_book(title, author, coverUrl, bookUrl)`: add a saved book manually
+  - `update_book_status(id, status)`: update a saved book's reading status
+  - `import_open_library_book(title, author, coverUrl, bookUrl)`: save an Open Library/NYT result locally
+  - `signup(email, password)`: create a user account, returns a user id
+  - `login(email, password)`: verify credentials, returns a user id
 
 ### models.rs
 
@@ -50,6 +61,8 @@ Defines data shapes and shared state:
   - title: `String`
   - author: `String`
   - status: `String`
+  - coverUrl: `Option<String>`
+  - bookUrl: `Option<String>`
 
 - `OpenLibraryBook`
   - key: `String`
@@ -58,50 +71,79 @@ Defines data shapes and shared state:
   - firstPublishYear: `Option<i32>`
   - coverId: `Option<i32>`
 
+- `NytBook` / `NytCategoryOverview` / `NytCategoryList` / `NytListName`
+  - shapes for NYT Best Sellers responses
+
 - `AppState`
-  - holds `Mutex<Vec<Book>>`
+  - holds an optional `PostgresStore` (`None` if `DATABASE_URL` is unset)
 - `SharedState`
   - type alias for `Arc<AppState>`
 
+### store.rs
+
+- Wraps a `deadpool-postgres` connection pool (pooled instead of a single persistent client, since Neon closes idle connections)
+- Creates/migrates the `users` and `favorite_books` tables on startup
+- Provides `create_user`, `find_user_by_email`, `list_books`, `add_book`, `update_book_status`
+
 ### openlibrary.rs
 
-- Calls `https://openlibrary.org/search.json?q=...`
-- Parses Open Library JSON into internal Rust structs
-- Maps results into `OpenLibraryBook`
-- Returns at most 10 results
+- Calls `https://openlibrary.org/search.json?q=...` and maps results into `OpenLibraryBook` (max 10 results)
+- Calls the NYT Best Sellers API (requires `NYT_API_KEY`) for overview, list names, and per-category lists
+
+### errors.rs
+
+- Typed `AppError` mapped to GraphQL `extensions.code` (e.g. `CONFIG_MISSING`, `UPSTREAM_TIMEOUT`, `UPSTREAM_RATE_LIMIT`)
 
 ---
 
 ## Runtime behavior
 
-- Local books are stored only in memory
-- No database or persistence layer
-- State is shared across GraphQL resolvers via `Arc<Mutex<...>>`
+- Saved books and user accounts persist in Neon Postgres via a connection pool
+- Auth is per-request: the frontend sends the logged-in user's id via the `x-user-id` header
 - GraphQL Playground is available at `http://127.0.0.1:8000/`
 - GraphQL API is available at `http://127.0.0.1:8000/graphql`
 
 ---
 
+## Environment variables
+
+Set in `backend/.env` (or repo-root `.env`/`.env.local`):
+
+- `DATABASE_URL` — Neon Postgres connection string
+- `NYT_API_KEY` — NYT Best Sellers API key
+
+---
+
 ## Backend dependencies
 
-From Cargo.toml:
+From `Cargo.toml`:
 
 - `axum`
 - `tokio`
-- `async-graphql`
-- `async-graphql-axum`
-- `serde`
-- `serde_json`
+- `async-graphql`, `async-graphql-axum`
+- `serde`, `serde_json`
 - `uuid`
 - `reqwest`
 - `urlencoding`
 - `tower-http`
+- `futures`
+- `dotenvy`
+- `bcrypt`
+- `tokio-postgres`, `postgres-native-tls`, `native-tls`, `deadpool-postgres`
 
 ---
 
-## Notes for documentation
+## Frontend overview
 
-- The backend is intentionally simple and in-memory
-- The login mutation is temporary/mock
-- Open Library integration is read-only; saved books are stored locally only
-- The frontend can safely use `http://127.0.0.1:8000/graphql` as the API endpoint
+The frontend lives in `frontend/` and is built with Next.js, React, Apollo Client, and GraphQL Codegen. Key components (`frontend/src/app/components`):
+
+- `Sidebar` / `LoginModal` — navigation and auth (guest or logged-in user)
+- `BookGrid` — NYT Best Sellers discovery grid
+- `BookSearch` / `SearchBar` — Open Library search
+- `BookCard` — shared card showing cover, "View Book" link, and a favorite button
+- `SavedBooks` — the logged-in user's saved/favorited books
+
+## Running locally
+
+- Backend: `cd backend && cargo run` (serves on `http://127.0.0.1:8000`)
+- Frontend: `cd frontend && npm run dev`
