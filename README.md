@@ -105,14 +105,7 @@ Defines data shapes and shared state:
 
 ---
 
-## Environment variables
 
-Set in `backend/.env` (or repo-root `.env`/`.env.local`):
-
-- `DATABASE_URL` — Neon Postgres connection string
-- `NYT_API_KEY` — NYT Best Sellers API key
-
----
 
 ## Backend dependencies
 
