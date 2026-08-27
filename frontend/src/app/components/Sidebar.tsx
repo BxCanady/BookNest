@@ -1,7 +1,13 @@
 "use client";
 
-import { Dispatch, ReactNode, SetStateAction, useState } from "react";
-import { Home, Grid2X2, Library, Download, Heart, LogOut } from "lucide-react";
+import {
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useEffect,
+  useState,
+} from "react";
+import { Home, Grid2X2, Heart, LogOut } from "lucide-react";
 import LoginModal from "./LoginModal";
 
 interface SidebarProps {
@@ -10,7 +16,7 @@ interface SidebarProps {
   onSelectItem?: (item: NavItem) => void;
 }
 
-type NavItem = "discover" | "category" | "library" | "download" | "favorite";
+type NavItem = "discover" | "category" | "download" | "favorite";
 
 interface ItemProps {
   icon: ReactNode;
@@ -32,9 +38,24 @@ export default function Sidebar({
     onSelectItem?.(item);
   };
 
-  const handleLogin = () => {
-    document.cookie = "authMode=user; path=/";
-    setAuthMode("user");
+  useEffect(() => {
+    const cookies = document.cookie.split(";").map((item) => item.trim());
+    const authCookie = cookies.find((item) => item.startsWith("authMode="));
+    if (authCookie?.includes("user")) {
+      setAuthMode("user");
+    } else if (authCookie?.includes("guest")) {
+      setAuthMode("guest");
+    } else {
+      setAuthMode(null);
+    }
+  }, [setAuthMode]);
+
+  const handleLogin = (userId?: string) => {
+    if (userId) {
+      document.cookie = `authMode=user; path=/`;
+      document.cookie = `userId=${userId}; path=/`;
+      setAuthMode("user");
+    }
     setShowLogin(false);
   };
 
@@ -46,12 +67,13 @@ export default function Sidebar({
   const handleLogout = () => {
     document.cookie =
       "authMode=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "userId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     setAuthMode(null);
   };
 
   return (
     <>
-      <aside className="hidden w-56 px-6 py-6 md:flex md:flex-col justify-between">
+      <aside className="hidden w-56 shrink-0 px-6 py-6 md:sticky md:top-0 md:flex md:h-screen md:flex-col md:justify-between">
         {/* Top Section */}
         <div>
           <h1 className="text-sm font-black tracking-widest">BOOKNEST</h1>
@@ -68,18 +90,6 @@ export default function Sidebar({
               label="Search"
               active={activeItem === "category"}
               onClick={() => handleNavClick("category")}
-            />
-            <Item
-              icon={<Library size={16} />}
-              label="Library"
-              active={activeItem === "library"}
-              onClick={() => handleNavClick("library")}
-            />
-            <Item
-              icon={<Download size={16} />}
-              label="Download"
-              active={activeItem === "download"}
-              onClick={() => handleNavClick("download")}
             />
             <Item
               icon={<Heart size={16} />}
@@ -175,7 +185,7 @@ function Item({ icon, label, active = false, onClick }: ItemProps) {
       }`}
     >
       {icon}
-      <span>{label}</span>
+      <span className="whitespace-nowrap">{label}</span>
     </button>
   );
 }

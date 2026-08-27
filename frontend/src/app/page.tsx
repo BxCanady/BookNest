@@ -6,7 +6,7 @@ import BookSearch from "./components/BookSearch";
 import SavedBooks from "./components/SavedBooks";
 import BookGrid from "./components/BookGrid";
 
-type NavItem = "discover" | "category" | "library" | "download" | "favorite";
+type NavItem = "discover" | "category" | "download" | "favorite";
 
 export default function HomePage() {
   const [authMode, setAuthMode] = useState<"guest" | "user" | null>(null);
@@ -25,7 +25,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-[#ebe8dc] p-6">
-      <div className="mx-auto flex max-w-7xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <div className="mx-auto flex max-w-7xl overflow-visible rounded-3xl bg-white shadow-2xl">
         <Sidebar
           authMode={authMode}
           setAuthMode={setAuthMode}

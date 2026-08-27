@@ -2,6 +2,7 @@
 
 import { useQuery } from "@apollo/client";
 import { GET_BOOKS } from "@/graphql/operations";
+import BookCard from "./BookCard";
 
 interface SavedBooksProps {
   authMode: "guest" | "user" | null;
@@ -12,6 +13,8 @@ interface BookData {
   title: string;
   author: string;
   status: string;
+  coverUrl?: string | null;
+  bookUrl?: string | null;
 }
 
 interface GetBooksData {
@@ -33,11 +36,20 @@ export default function SavedBooks({ authMode }: SavedBooksProps) {
     <div className="mt-10">
       <h3 className="text-xl font-bold mb-4">Saved Books</h3>
 
-      {data?.books?.map((b) => (
-        <div key={b.id} className="bg-white p-3 rounded mb-2">
-          {b.title} — {b.author}
-        </div>
-      ))}
+      <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        {data?.books?.map((b) => (
+          <BookCard
+            key={b.id}
+            book={{
+              id: b.id,
+              title: b.title,
+              author: b.author,
+              coverUrl: b.coverUrl || undefined,
+              bookUrl: b.bookUrl || undefined,
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }

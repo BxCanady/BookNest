@@ -7,6 +7,8 @@ export const GET_BOOKS = gql`
       title
       author
       status
+      coverUrl
+      bookUrl
     }
   }
 `;
@@ -45,6 +47,8 @@ export const ADD_BOOK = gql`
       title
       author
       status
+      coverUrl
+      bookUrl
     }
   }
 `;
@@ -61,12 +65,24 @@ export const UPDATE_BOOK_STATUS = gql`
 `;
 
 export const IMPORT_OPEN_LIBRARY_BOOK = gql`
-  mutation ImportOpenLibraryBook($title: String!, $author: String!) {
-    importOpenLibraryBook(title: $title, author: $author) {
+  mutation ImportOpenLibraryBook(
+    $title: String!
+    $author: String!
+    $coverUrl: String
+    $bookUrl: String
+  ) {
+    importOpenLibraryBook(
+      title: $title
+      author: $author
+      coverUrl: $coverUrl
+      bookUrl: $bookUrl
+    ) {
       id
       title
       author
       status
+      coverUrl
+      bookUrl
     }
   }
 `;
@@ -74,5 +90,11 @@ export const IMPORT_OPEN_LIBRARY_BOOK = gql`
 export const LOGIN = gql`
   mutation Login($email: String!, $password: String!) {
     login(email: $email, password: $password)
+  }
+`;
+
+export const SIGNUP = gql`
+  mutation Signup($email: String!, $password: String!) {
+    signup(email: $email, password: $password)
   }
 `;

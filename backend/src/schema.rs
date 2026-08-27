@@ -1,4 +1,5 @@
 use async_graphql::{Context, EmptySubscription, Object, Schema};
+use bcrypt::{DEFAULT_COST, hash, verify};
 use uuid::Uuid;
 
 use crate::errors::{AppError, AppResult};
@@ -13,28 +14,50 @@ fn nyt_api_key() -> AppResult<String> {
     std::env::var("NYT_API_KEY").map_err(|_| AppError::missing_env("NYT_API_KEY"))
 }
 
+fn auth_error() -> AppError {
+    AppError::internal("invalid credentials")
+}
+
+fn current_user_id(ctx: &Context<'_>) -> async_graphql::Result<Uuid> {
+    ctx.data::<Uuid>()
+        .copied()
+        .map_err(|_| AppError::internal("authentication required").into_graphql())
+}
+
 // QueryRoot defines all read operations for GraphQL.
 pub struct QueryRoot;
 
 #[Object]
 impl QueryRoot {
     // Return all locally saved books.
-    async fn books(&self, ctx: &Context<'_>) -> Vec<Book> {
+    async fn books(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<Book>> {
         let state = ctx.data_unchecked::<SharedState>();
-        state.books.lock().unwrap().clone()
+        let user_id = current_user_id(ctx)?;
+        let store = state
+            .store
+            .clone()
+            .ok_or_else(|| AppError::internal("database not configured"))
+            .map_err(AppError::into_graphql)?;
+        store
+            .list_books(user_id)
+            .await
+            .map_err(AppError::into_graphql)
     }
 
     // Return one local book by UUID.
-    async fn book(&self, ctx: &Context<'_>, id: Uuid) -> Option<Book> {
+    async fn book(&self, ctx: &Context<'_>, id: Uuid) -> async_graphql::Result<Option<Book>> {
         let state = ctx.data_unchecked::<SharedState>();
-
-        state
-            .books
-            .lock()
-            .unwrap()
-            .iter()
-            .find(|book| book.id == id)
-            .cloned()
+        let user_id = current_user_id(ctx)?;
+        let store = state
+            .store
+            .clone()
+            .ok_or_else(|| AppError::internal("database not configured"))
+            .map_err(AppError::into_graphql)?;
+        let books = store
+            .list_books(user_id)
+            .await
+            .map_err(AppError::into_graphql)?;
+        Ok(books.into_iter().find(|book| book.id == id))
     }
 
     // Search Open Library and return external search results.
@@ -94,18 +117,32 @@ pub struct MutationRoot;
 #[Object]
 impl MutationRoot {
     // Add a new local book manually.
-    async fn add_book(&self, ctx: &Context<'_>, title: String, author: String) -> Book {
+    async fn add_book(
+        &self,
+        ctx: &Context<'_>,
+        title: String,
+        author: String,
+        cover_url: Option<String>,
+        book_url: Option<String>,
+    ) -> async_graphql::Result<Book> {
         let state = ctx.data_unchecked::<SharedState>();
-
-        let book = Book {
-            id: Uuid::new_v4(),
-            title,
-            author,
-            status: "TO_READ".to_string(),
-        };
-
-        state.books.lock().unwrap().push(book.clone());
-        book
+        let user_id = current_user_id(ctx)?;
+        let store = state
+            .store
+            .clone()
+            .ok_or_else(|| AppError::internal("database not configured"))
+            .map_err(AppError::into_graphql)?;
+        let book = store
+            .add_book(
+                user_id,
+                &title,
+                &author,
+                cover_url.as_deref(),
+                book_url.as_deref(),
+            )
+            .await
+            .map_err(AppError::into_graphql)?;
+        Ok(book)
     }
 
     // Update the reading status for a local saved book.
@@ -114,16 +151,19 @@ impl MutationRoot {
         ctx: &Context<'_>,
         id: Uuid,
         status: String,
-    ) -> Option<Book> {
+    ) -> async_graphql::Result<Option<Book>> {
         let state = ctx.data_unchecked::<SharedState>();
-        let mut books = state.books.lock().unwrap();
-
-        if let Some(book) = books.iter_mut().find(|book| book.id == id) {
-            book.status = status;
-            return Some(book.clone());
-        }
-
-        None
+        let user_id = current_user_id(ctx)?;
+        let store = state
+            .store
+            .clone()
+            .ok_or_else(|| AppError::internal("database not configured"))
+            .map_err(AppError::into_graphql)?;
+        let book = store
+            .update_book_status(user_id, id, &status)
+            .await
+            .map_err(AppError::into_graphql)?;
+        Ok(book)
     }
 
     // Import a book from Open Library into the local app library.
@@ -133,34 +173,81 @@ impl MutationRoot {
         ctx: &Context<'_>,
         title: String,
         author: String,
-    ) -> Book {
+        cover_url: Option<String>,
+        book_url: Option<String>,
+    ) -> async_graphql::Result<Book> {
         let state = ctx.data_unchecked::<SharedState>();
-
-        let book = Book {
-            id: Uuid::new_v4(),
-            title,
-            author,
-            status: "TO_READ".to_string(),
-        };
-
-        state.books.lock().unwrap().push(book.clone());
-        book
+        let user_id = current_user_id(ctx)?;
+        let store = state
+            .store
+            .clone()
+            .ok_or_else(|| AppError::internal("database not configured"))
+            .map_err(AppError::into_graphql)?;
+        let book = store
+            .add_book(
+                user_id,
+                &title,
+                &author,
+                cover_url.as_deref(),
+                book_url.as_deref(),
+            )
+            .await
+            .map_err(AppError::into_graphql)?;
+        Ok(book)
     }
 
     // Temporary login mutation for authentication.
     async fn login(
         &self,
-        _ctx: &Context<'_>,
+        ctx: &Context<'_>,
         email: String,
         password: String,
     ) -> async_graphql::Result<String> {
-        // TEMP AUTH (replace later with DB check)
-        if email == "admin@test.com" && password == "password" {
-            // Return a fake token for now
-            Ok("mock-token-123".to_string())
-        } else {
-            Err("Invalid credentials".into())
+        let state = ctx.data_unchecked::<SharedState>();
+        let store = state
+            .store
+            .clone()
+            .ok_or_else(|| AppError::internal("database not configured"))
+            .map_err(AppError::into_graphql)?;
+        let Some((user_id, password_hash)) = store
+            .find_user_by_email(&email)
+            .await
+            .map_err(AppError::into_graphql)?
+        else {
+            return Err(auth_error().into_graphql().into());
+        };
+
+        let is_valid = verify(&password, &password_hash)
+            .map_err(|err| AppError::internal(format!("password verification failed: {err}")))
+            .map_err(AppError::into_graphql)?;
+        if !is_valid {
+            return Err(auth_error().into_graphql().into());
         }
+
+        let user_id = user_id.to_string();
+        Ok(user_id)
+    }
+
+    async fn signup(
+        &self,
+        ctx: &Context<'_>,
+        email: String,
+        password: String,
+    ) -> async_graphql::Result<String> {
+        let state = ctx.data_unchecked::<SharedState>();
+        let store = state
+            .store
+            .clone()
+            .ok_or_else(|| AppError::internal("database not configured"))
+            .map_err(AppError::into_graphql)?;
+        let password_hash = hash(&password, DEFAULT_COST)
+            .map_err(|err| AppError::internal(format!("failed to hash password: {err}")))
+            .map_err(AppError::into_graphql)?;
+        let user_id = store
+            .create_user(&email, &password_hash)
+            .await
+            .map_err(AppError::into_graphql)?;
+        Ok(user_id.to_string())
     }
 }
 

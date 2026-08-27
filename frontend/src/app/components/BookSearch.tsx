@@ -47,10 +47,17 @@ export default function BookSearch({ canSave }: BookSearchProps) {
       return;
     }
 
+    const coverUrl = book.coverId
+      ? `https://covers.openlibrary.org/b/id/${book.coverId}-M.jpg`
+      : null;
+    const bookUrl = book.key ? `https://openlibrary.org${book.key}` : null;
+
     await importBook({
       variables: {
         title: book.title,
         author: book.authorName?.[0] || "Unknown Author",
+        coverUrl,
+        bookUrl,
       },
     });
   };

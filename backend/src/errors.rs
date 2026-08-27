@@ -2,6 +2,7 @@ use async_graphql::{Error, ErrorExtensions};
 
 pub type AppResult<T> = Result<T, AppError>;
 
+#[derive(Debug)]
 pub enum AppError {
     MissingEnv {
         var: &'static str,
@@ -22,11 +23,16 @@ pub enum AppError {
         service: &'static str,
         status: Option<u16>,
     },
+    Internal(String),
 }
 
 impl AppError {
     pub fn missing_env(var: &'static str) -> Self {
         Self::MissingEnv { var }
+    }
+
+    pub fn internal(message: impl Into<String>) -> Self {
+        Self::Internal(message.into())
     }
 
     pub fn from_reqwest(service: &'static str, err: reqwest::Error) -> Self {
@@ -67,28 +73,24 @@ impl AppError {
             Self::UpstreamRateLimited { .. } => "UPSTREAM_RATE_LIMIT",
             Self::UpstreamUnauthorized { .. } => "UPSTREAM_UNAUTHORIZED",
             Self::UpstreamBadResponse { .. } => "UPSTREAM_BAD_RESPONSE",
+            Self::Internal(_) => "INTERNAL_ERROR",
         }
     }
 
     fn message(&self) -> String {
         match self {
             Self::MissingEnv { var } => format!("Missing required environment variable: {}", var),
-            Self::UpstreamTimeout { service } => {
-                format!("{} did not respond in time", service)
-            }
+            Self::UpstreamTimeout { service } => format!("{} did not respond in time", service),
             Self::UpstreamUnavailable { service } => {
                 format!("{} is currently unavailable", service)
             }
-            Self::UpstreamRateLimited { service } => {
-                format!("{} rate limit reached", service)
-            }
-            Self::UpstreamUnauthorized { service } => {
-                format!("{} rejected the request", service)
-            }
+            Self::UpstreamRateLimited { service } => format!("{} rate limit reached", service),
+            Self::UpstreamUnauthorized { service } => format!("{} rejected the request", service),
             Self::UpstreamBadResponse { service, status } => match status {
                 Some(code) => format!("{} returned an unexpected response ({})", service, code),
                 None => format!("{} returned an unexpected response", service),
             },
+            Self::Internal(message) => message.clone(),
         }
     }
 
@@ -110,6 +112,7 @@ impl AppError {
                 | Self::UpstreamBadResponse { service, .. } => {
                     ext.set("service", service);
                 }
+                Self::Internal(_) => {}
             }
 
             if let Self::UpstreamBadResponse {

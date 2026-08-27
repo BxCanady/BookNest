@@ -1,7 +1,9 @@
 use async_graphql::SimpleObject;
 use serde::Deserialize;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use uuid::Uuid;
+
+use crate::store::PostgresStore;
 
 // This is the local book model stored in your app.
 // These are books the user has saved into the app itself.
@@ -11,6 +13,10 @@ pub struct Book {
     pub title: String,
     pub author: String,
     pub status: String,
+    #[graphql(name = "coverUrl")]
+    pub cover_url: Option<String>,
+    #[graphql(name = "bookUrl")]
+    pub book_url: Option<String>,
 }
 
 // This is the shape of a book result that comes from Open Library.
@@ -77,11 +83,16 @@ pub struct NytListName {
     pub updated: String,
 }
 
-// This is the shared app state for local books.
-// Mutex protects the vector because multiple requests may hit the server.
-#[derive(Default)]
+// Shared app state for the GraphQL server.
+#[derive(Clone)]
 pub struct AppState {
-    pub books: Mutex<Vec<Book>>,
+    pub store: Option<PostgresStore>,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self { store: None }
+    }
 }
 
 // Shared state type used throughout the app.
