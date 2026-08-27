@@ -100,8 +100,8 @@ Defines data shapes and shared state:
 
 - Saved books and user accounts persist in Neon Postgres via a connection pool
 - Auth is per-request: the frontend sends the logged-in user's id via the `x-user-id` header
-- GraphQL Playground is available at `http://127.0.0.1:8000/`
-- GraphQL API is available at `http://127.0.0.1:8000/graphql`
+- GraphQL Playground is available at {...}
+- GraphQL API is available at {...}
 
 ---
 
@@ -138,6 +138,7 @@ The frontend lives in `frontend/` and is built with Next.js, React, Apollo Clien
 
 ## Running locally
 
-- Backend: `cd backend && cargo run` (serves on `http://127.0.0.1:8000`)
+- Backend: `cd backend && cargo run`
 - Frontend: `cd frontend && npm run dev`
+- "dev:full": "concurrently \"npm run dev\" \"cargo run --manifest-path ../backend/Cargo.toml\"",
 <img width="782" height="407" alt="Screenshot 2026-08-27 021528" src="https://github.com/user-attachments/assets/7bd9dff0-eda0-4b59-a7bb-36c8a867c697" />
